@@ -7,6 +7,8 @@ import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import com.bumptech.glide.Glide;
+
 import cn.yky.camera.DIYCameraActivity;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
@@ -42,6 +44,16 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 Intent intent = new Intent(this, DIYCameraActivity.class);
                 startActivityForResult(intent, OPENCAMERA);
                 break;
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (resultCode == RESULT_OK) {
+            if (requestCode == OPENCAMERA) {
+                Glide.with(this).load(data.getStringExtra("IMGPATH")).into(ivPreview);
+            }
         }
     }
 }
