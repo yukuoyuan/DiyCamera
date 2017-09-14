@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">DiyCamera</string>
+    <string name="open_camera">打开相机</string>
 </resources>

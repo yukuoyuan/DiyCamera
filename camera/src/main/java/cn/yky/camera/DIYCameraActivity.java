@@ -4,9 +4,11 @@ import android.hardware.Camera;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
+import android.util.DisplayMetrics;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
+import android.widget.FrameLayout;
 import android.widget.TextView;
 
 import cn.yky.camera.utils.CameraUtils;
@@ -41,7 +43,9 @@ public class DIYCameraActivity extends AppCompatActivity implements View.OnClick
      */
     private Camera mCamera;
     private SurfaceHolder mHolder;
-
+    //屏幕宽高
+    private int screenWidth;
+    private int screenHeight;
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -57,6 +61,12 @@ public class DIYCameraActivity extends AppCompatActivity implements View.OnClick
     private void initData() {
         mHolder = diyCameraSfvCamera.getHolder();
         mHolder.addCallback(this);
+        /**
+         * 获取屏幕的宽高
+         */
+        DisplayMetrics dm = getResources().getDisplayMetrics();
+        screenWidth = dm.widthPixels;
+        screenHeight = dm.heightPixels;
     }
 
     /**
@@ -70,7 +80,9 @@ public class DIYCameraActivity extends AppCompatActivity implements View.OnClick
             /**
              * 预览界面
              */
-
+            if (mHolder != null) {
+                startPreview(mCamera, mHolder);
+            }
         }
     }
 
@@ -166,7 +178,13 @@ public class DIYCameraActivity extends AppCompatActivity implements View.OnClick
         /**
          * 设置预览的最小尺寸
          */
-
+        Camera.Size previewSize = CameraUtils.instance().getMinSize(parameters.getSupportedPreviewSizes());
+        parameters.setPreviewSize(previewSize.width, previewSize.height);
+        Camera.Size pictrueSize =  CameraUtils.instance().getMinSize(parameters.getSupportedPreviewSizes());
+        parameters.setPictureSize(pictrueSize.width, pictrueSize.height);
+        mCamera.setParameters(parameters);
+        FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(screenWidth, screenHeight);
+        diyCameraSfvCamera.setLayoutParams(params);
     }
 
     /**
