@@ -1,16 +1,26 @@
 package cn.yky.camera;
 
+import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.hardware.Camera;
 import android.os.Bundle;
+import android.os.Environment;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
+import android.text.TextUtils;
 import android.util.DisplayMetrics;
+import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 
+import java.io.File;
+import java.io.IOException;
+
+import cn.yky.camera.utils.BitmapUtils;
 import cn.yky.camera.utils.CameraUtils;
 
 /**
@@ -43,9 +53,16 @@ public class DIYCameraActivity extends AppCompatActivity implements View.OnClick
      */
     private Camera mCamera;
     private SurfaceHolder mHolder;
-    //屏幕宽高
+    /**
+     * 屏幕的宽高
+     */
     private int screenWidth;
     private int screenHeight;
+    /**
+     * 定义的图片路径
+     */
+    private String IMGPATH;
+
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -120,7 +137,47 @@ public class DIYCameraActivity extends AppCompatActivity implements View.OnClick
         } else if (i == R.id.diy_camera_switch_camera) {
             switchCamera();
         } else if (i == R.id.diy_camera_take_picture) {
+            takePicture();
         }
+    }
+
+    /**
+     * 拍照获取图片
+     */
+    private void takePicture() {
+        mCamera.takePicture(null, null, new Camera.PictureCallback() {
+            @Override
+            public void onPictureTaken(byte[] data, Camera camera) {
+                /**
+                 * 获取照片
+                 */
+                Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
+                /**
+                 * 默认得到的照片是旋转的,需要旋转过来
+                 */
+                Bitmap saveBitmap = CameraUtils.instance().setTakePicktrueOrientation(mCameraId, bitmap);
+                saveBitmap = Bitmap.createScaledBitmap(saveBitmap, screenWidth, screenHeight, true);
+                /**
+                 * 如果没有自己定义拍照的路径,那么我们就随机生成一个
+                 */
+                if (TextUtils.isEmpty(IMGPATH)) {
+                    IMGPATH = getExternalFilesDir(Environment.DIRECTORY_DCIM).getPath() +
+                            File.separator + System.currentTimeMillis() + ".jpeg";
+                }
+                BitmapUtils.instance().saveJPEG(DIYCameraActivity.this, saveBitmap, IMGPATH, 100);
+                if (!bitmap.isRecycled()) {
+                    bitmap.recycle();
+                }
+                if (!saveBitmap.isRecycled()) {
+                    saveBitmap.recycle();
+                }
+                Log.d("图片的路径", IMGPATH);
+                Intent intent = new Intent();
+                intent.putExtra("IMGPATH", IMGPATH);
+                setResult(RESULT_OK, intent);
+                finish();
+            }
+        });
     }
 
     /**
@@ -152,10 +209,23 @@ public class DIYCameraActivity extends AppCompatActivity implements View.OnClick
      * @param mHolder
      */
     private void startPreview(Camera mCamera, SurfaceHolder mHolder) {
-        /**
-         * 设置相机的各项参数
-         */
-        setCameraParameter(mCamera);
+        try {
+            /**
+             * 设置相机的各项参数
+             */
+            setCameraParameter(mCamera);
+            mCamera.setPreviewDisplay(mHolder);
+            /**
+             * 矫正先不挂机的预览方向
+             */
+            CameraUtils.instance().setCameraDisplayOrientation(this, mCameraId, mCamera);
+            /**
+             * 开始预览相机
+             */
+            mCamera.startPreview();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -178,9 +248,9 @@ public class DIYCameraActivity extends AppCompatActivity implements View.OnClick
         /**
          * 设置预览的最小尺寸
          */
-        Camera.Size previewSize = CameraUtils.instance().getMinSize(parameters.getSupportedPreviewSizes());
+        Camera.Size previewSize = CameraUtils.instance().getMaxSize(parameters.getSupportedPreviewSizes());
         parameters.setPreviewSize(previewSize.width, previewSize.height);
-        Camera.Size pictrueSize =  CameraUtils.instance().getMinSize(parameters.getSupportedPreviewSizes());
+        Camera.Size pictrueSize = CameraUtils.instance().getMaxSize(parameters.getSupportedPreviewSizes());
         parameters.setPictureSize(pictrueSize.width, pictrueSize.height);
         mCamera.setParameters(parameters);
         FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(screenWidth, screenHeight);
